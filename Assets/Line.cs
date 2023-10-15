@@ -35,7 +35,6 @@ public class Line
         return angle;
     }
     
-    
     public static bool FasterLineSegmentIntersection(Line first, Line second)
     {
         Vector2 a = first.endPoint - first.startPoint;

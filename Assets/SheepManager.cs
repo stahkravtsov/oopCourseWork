@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.U2D;
@@ -32,18 +31,19 @@ public class SheepManager : MonoBehaviour
 
     private readonly Random _random = new Random();
 
-    /*[SerializeField]*/
     private EdgeCollider2D _edgeCollider;
     [SerializeField] private SpriteShapeController _spriteShapeController;
     [SerializeField] private Ship _ship;
     [SerializeField] private int MinCountShipInLake;
     [SerializeField] private int MaxCountShipInLake;
 
-    private int _countShipInLake;
+    private readonly List<Ship> _ships = new List<Ship>();
+    
     private bool _areShipsSpawning;
-    private List<Ship> _ships = new List<Ship>();
-    private float _lakePerimeter;
     private bool _isFirstRandom = true;
+    private int _uniqueShipNumber;
+    private int _countShipInLake;
+    private float _lakePerimeter;
 
     private void Awake()
     {
@@ -115,14 +115,9 @@ public class SheepManager : MonoBehaviour
     {
         _ships.Add(Instantiate(_ship, transform, false));
         _ships[^1].InitializeShip(GetRandomPoint(), GetRandomPoint());
+        _ships[^1].gameObject.name += _uniqueShipNumber++;
 
         Ship currentShip = _ships[^1];
-
-        for (int i = 0; i < _ships.Count - 1; i++)
-        {
-            Debug.Log(i + " / " + _ships.Count + " " +
-                      Line.FasterLineSegmentIntersection(currentShip.GetTrajectory(), _ships[i].GetTrajectory()));
-        }
 
         _ships[^1].MoveShip(true);
         _ships[^1].RemoveFromListEvent.AddListener(RemoveShipFromList);
@@ -131,9 +126,6 @@ public class SheepManager : MonoBehaviour
     private Vector2 GetRandomPoint()
     {
         Vector2[] points = _edgeCollider.points;
-        List<Vector2> list = points.ToList();
-        list.Add(points[0]);
-        points = list.ToArray();
 
         if (_isFirstRandom)
         {
@@ -148,13 +140,13 @@ public class SheepManager : MonoBehaviour
         do
         {
             padding -= currentLength;
-            currentLength = (points[i + 1] - points[i]).magnitude;
+            currentLength = (points[(i + 1) % points.Length] - points[i % points.Length]).magnitude;
             i++;
         } while (padding - currentLength > 0f);
 
-        Vector2 vector2 = points[i] - points[i - 1];
+        Vector2 vector2 = points[i % points.Length] - points[(i - 1) % points.Length];
 
-        return points[i - 1] + vector2 * (padding / vector2.magnitude);
+        return points[(i - 1) % points.Length] + vector2 * (padding / vector2.magnitude);
     }
 
     private void RemoveShipFromList(Ship ship)
