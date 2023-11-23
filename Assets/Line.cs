@@ -3,82 +3,71 @@ using UnityEngine;
 
 public class Line
 {
-    public Vector2 startPoint;
-    public Vector2 endPoint;
-
-    private float _k;
-    private float _b;
+    public Vector2 startPoint { get; }
+    public Vector2 endPoint { get; }
 
     public Line(Vector2 start, Vector2 end)
     {
         startPoint = start;
         endPoint = end;
-
-        _k = (end.y - start.y) / (end.x - start.x);
-        _b = start.y - start.x * _k;
     }
 
-    public bool IsLinesIntersection(Line secondLine)
-    {
-        return false;
-    }
-
-    public double GetYByX(double x)
-    {
-        return _k * x + _b;
-    }
-
+    //Return the angle between start and end point
     public float GatAngle()
     {
         Vector2 delta = startPoint - endPoint;
-        float angle = 180 / Mathf.PI * Mathf.Atan(_k) + 90 + (delta.x < 0 ? 180 : 0);
+        float angle = 180 / Mathf.PI * Mathf.Atan((endPoint.y - startPoint.y) / (endPoint.x - startPoint.x)) + 90 +
+                      (delta.x < 0 ? 180 : 0);
         return angle;
     }
-    
-    public static bool FasterLineSegmentIntersection(Line first, Line second)
+
+    //Determines segments intersection, return true and intersect point in args Intersection, otherwise false 
+    public static bool SegmentIntersection(out Vector3 intersection, Line currentShipTrajectory,
+        Line prevShipTrajectory)
     {
-        Vector2 a = first.endPoint - first.startPoint;
-        Vector2 b = second.startPoint - second.endPoint;
-        Vector2 c = first.startPoint - second.startPoint;
+        return SegmentIntersection(out intersection,
+            currentShipTrajectory.startPoint,
+            currentShipTrajectory.endPoint - currentShipTrajectory.startPoint,
+            prevShipTrajectory.startPoint,
+            prevShipTrajectory.endPoint - prevShipTrajectory.startPoint);
+    }
 
-        float alphaNumerator = b.y * c.x - b.x * c.y;
-        float alphaDenominator = a.y * b.x - a.x * b.y;
-        float betaNumerator = a.x * c.y - a.y * c.x;
-        float betaDenominator = a.y * b.x - a.x * b.y;
+    //Determines segments intersection, return true and intersect point in args Intersection, otherwise false,
+    //take start point and direction vector of each segment
+    private static bool SegmentIntersection(out Vector3 intersection, Vector3 linePoint1, Vector3 lineVec1,
+        Vector3 linePoint2, Vector3 lineVec2)
+    {
+        Vector3 lineVec3 = linePoint2 - linePoint1;
+        Vector3 crossVec1and2 = Vector3.Cross(lineVec1, lineVec2);
+        Vector3 crossVec3and2 = Vector3.Cross(lineVec3, lineVec2);
 
-        bool doIntersect = true;
+        float planarFactor = Vector3.Dot(lineVec3, crossVec1and2);
 
-        if (alphaDenominator == 0 || betaDenominator == 0)
+        //is coplanar, and not parrallel
+        if (Mathf.Abs(planarFactor) < 0.0001f && crossVec1and2.sqrMagnitude > 0.0001f)
         {
-            doIntersect = false;
-        }
-        else
-        {
-            if (alphaDenominator > 0)
-            {
-                if (alphaNumerator < 0 || alphaNumerator > alphaDenominator)
-                {
-                    doIntersect = false;
-                }
-            }
-            else if (alphaNumerator > 0 || alphaNumerator < alphaDenominator)
-            {
-                doIntersect = false;
-            }
+            float s = Vector3.Dot(crossVec3and2, crossVec1and2) / crossVec1and2.sqrMagnitude;
+            intersection = linePoint1 + (lineVec1 * s);
 
-            if (doIntersect && betaDenominator > 0)
-            {
-                if (betaNumerator < 0 || betaNumerator > betaDenominator)
-                {
-                    doIntersect = false;
-                }
-            }
-            else if (betaNumerator > 0 || betaNumerator < betaDenominator)
-            {
-                doIntersect = false;
-            }
+            bool val1 = DoesPointBelongsSegment(intersection, linePoint1, linePoint1 + lineVec1);
+            bool val2 = DoesPointBelongsSegment(intersection, linePoint2, linePoint2 + lineVec2);
+
+            return val1 && val2;
         }
 
-        return doIntersect;
+        intersection = Vector3.zero;
+        return false;
+    }
+
+    //Determines does point belongs segment, takes point, start and end segment points
+    private static bool DoesPointBelongsSegment(Vector3 point, Vector3 aEnd, Vector3 bEnd)
+    {
+        float minX = Math.Min(aEnd.x, bEnd.x);
+        float maxX = Math.Max(aEnd.x, bEnd.x);
+
+        float minY = Math.Min(aEnd.y, bEnd.y);
+        float maxY = Math.Max(aEnd.y, bEnd.y);
+
+        return !(point.x > maxX) && !(point.x < minX) && !(point.y > maxY) && !(point.y < minY);
     }
 }
